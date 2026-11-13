@@ -1,0 +1,26 @@
+# 统一换行符，避免在 macOS / Linux 上 checkout 后 .bat 变成 LF 而无法执行
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+*.sh            text eol=lf
+
+# 常见文本文件统一用 LF
+*.py            text eol=lf
+*.js            text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf
+*.md            text eol=lf
+*.json          text eol=lf
+*.txt           text eol=lf
+
+# 二进制，别做任何换行转换
+*.ico           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.mp4           binary
+*.mp3           binary
+*.wav           binary
+*.exe           binary
+*.bin           binary

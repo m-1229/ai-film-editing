@@ -26,19 +26,19 @@
 
 ```bash
 # 正常启动（开独立窗口）
-D:\Python311\python.exe "D:/ai 剪辑工具/main.py"
+python main.py
 
-# 无窗口调试（看日志）
-D:\Python311\python.exe "D:/ai 剪辑工具/main.py" web 8756
+# 指定端口（照样会开窗口，不是无界面模式）
+python main.py web 8756
 
 # 命令行只分析不渲染
-D:\Python311\python.exe "D:/ai 剪辑工具/main.py" analyze "视频路径"
+python main.py analyze "视频路径"
 
 # 旧版 Tkinter 界面（兜底用）
-D:\Python311\python.exe "D:/ai 剪辑工具/main.py" gui
+python main.py gui
 ```
 
-- **桌面入口**：`C:\Users\Jaman\Desktop\AI 剪辑工具.pyw`（.lnk 快捷方式被本机安全策略禁了 COM，用 .pyw 替代，损坏的 .lnk 备份在 `.backup/`）
+- **桌面入口**（仅开发机）：桌面放一个 `.pyw` 脚本指向 `main.py`（`.lnk` 快捷方式被本机安全策略禁了 COM，改用 `.pyw` 绕开）
 - **服务地址**：`http://127.0.0.1:8756`，Edge `--app` 模式独立窗口
 - **生命周期**：页面每 1s 打 `/api/ping`；关窗后约 16s 自动退出，无残留进程
 - **Python**：`D:\Python311\python.exe`，项目根自动注入 `sys.path`
@@ -611,7 +611,7 @@ D:\Python311\python.exe "D:/ai 剪辑工具/main.py" gui
 
 直接把这句话发给 AI：
 
-> 读一下 `D:/ai 剪辑工具/progress.md`，我们接着做。这次要做的是【XXX】。
+> 读一下 `progress.md`，我们接着做。这次要做的是【XXX】。
 
 如果想让它先熟悉代码，再补一句：
 
@@ -633,7 +633,7 @@ D:\Python311\python.exe "D:/ai 剪辑工具/main.py" gui
 
 P0-0 的三步（接成一条线 / 剪点更准 / 专属打磨）**已全部打勾**。下次开新窗口，第一句直接粘：
 
-> 读 `D:/ai 剪辑工具/progress.md`，重点看第六节 P0-0 和第五节坑 8–14（字幕那颗雷最贵）。口播三步都做完了，这次做【XXX】。开工前先复述改哪几个文件、每条的验收标准、会动哪些判断逻辑。
+> 读 `progress.md`，重点看第六节 P0-0 和第五节坑 8–14（字幕那颗雷最贵）。口播三步都做完了，这次做【XXX】。开工前先复述改哪几个文件、每条的验收标准、会动哪些判断逻辑。
 
 **建议的下一步（按性价比排）**：
 

@@ -8,12 +8,21 @@ models/
 # 内置 ffmpeg（84M）。找不到时会自动回退到系统 PATH 或 imageio-ffmpeg
 bin/
 
-# 内置音乐库（23M）
+# 内置音乐库（23M）+ 用户导入的 BGM
 music/
 
 # 用户视频、成片、转写缓存（数百 M）
 projects/
 o.mp4
+
+# ============================================================
+#  ★ 本地配置：可能含大模型 API key，绝不入库
+# ============================================================
+config.json
+config.local.json
+.env
+.env.*
+!.env.example
 
 # ============================================================
 #  Python 缓存与日志
@@ -26,12 +35,39 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+.eggs/
+
+# 虚拟环境
 .venv/
+.venv*/
 venv/
+venv*/
 env/
+env*/
+ENV/
 
 *.log
-运行日志.log
+
+# ============================================================
+#  测试 / 类型检查 / 覆盖率产物
+# ============================================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+fail_*.log
+
+# 开发期的临时脚本与临时输出（下划线开头的验证脚本、一次性的产物）
+_*_tmp.py
+_.*
+test_out/
+tmp/
+scratch/
 
 # ============================================================
 #  开发工具本地产物
@@ -40,10 +76,9 @@ env/
 .backup/
 .vscode/
 .idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# 测试产生的临时文件
-fail_*.log
-_*_tmp.py
+~$*
