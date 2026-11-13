@@ -325,7 +325,9 @@ def cmd_install(args):
         say("  也可以之后单独执行：python setup_env.py --download-model")
 
     title(5, "启动自检")
-    if cmd_check(args) != 0:
+    # 必须在虚拟环境里跑：否则查到的是系统 Python 的包，结果不作数
+    code = run_stream([vpy, str(ROOT / "setup_env.py"), "--check"])
+    if code != 0:
         return 1
 
     say("")
