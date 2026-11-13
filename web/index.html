@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 剪辑工具</title>
+<link rel="icon" type="image/x-icon" href="/web/icon.ico" />
+<link rel="apple-touch-icon" href="/web/icon.png" />
+<link rel="stylesheet" href="/web/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 7l9 5-9 5V7z" fill="currentColor"/></svg>
+      </div>
+      <div class="brand-text">
+        <strong>AI 剪辑</strong>
+        <span id="fileName" class="file-chip hidden"></span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btnPick" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        选择视频
+      </button>
+      <button id="btnExport" class="btn btn-ghost" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12m0 0l-4-4m4 4l4-4"/><path d="M4 18v1a1 1 0 001 1h14a1 1 0 001-1v-1"/></svg>
+        导出建议
+      </button>
+    </div>
+    <div id="topProgress" class="top-progress"><i></i></div>
+  </header>
+
+  <!-- 主区 -->
+  <main class="workspace">
+    <section class="stage">
+      <div class="player-wrap" id="playerWrap">
+        <video id="video" playsinline preload="metadata"></video>
+        <div class="empty-stage" id="emptyStage">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/></svg>
+          </div>
+          <h2>把视频放进来，AI 帮你剪</h2>
+          <p>选好片，用一句话说清想怎么剪，它自己判断剪哪里</p>
+          <button id="btnPickBig" class="btn btn-primary">选择视频文件</button>
+          <p class="hint">支持 mp4 / mov / avi / mkv / webm</p>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button id="btnPlay" class="icon-btn" title="播放 / 暂停（空格）" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M8 5.5v13l11-6.5z"/></svg>
+        </button>
+        <span class="timecode"><b id="curTime">00:00</b><span>/</span><span id="durTime">00:00</span></span>
+        <div class="spacer"></div>
+        <div class="legend">
+          <span><i class="dot dot-scene"></i>场景切点</span>
+          <span><i class="dot dot-silent"></i>静音</span>
+          <span><i class="dot dot-dup"></i>重复</span>
+          <span><i class="dot dot-static"></i>静止</span>
+          <span><i class="dot dot-blank"></i>黑场</span>
+          <span><i class="dot dot-filler"></i>口头禅</span>
+          <span><i class="dot dot-retake"></i>重说</span>
+          <span><i class="dot dot-manual"></i>手动</span>
+        </div>
+      </div>
+
+      <div class="timeline-block">
+        <div class="timeline" id="timeline">
+          <div class="filmstrip" id="filmstrip"></div>
+          <div class="overlay" id="overlay"></div>
+          <div class="playhead" id="playhead"></div>
+          <div class="timeline-empty" id="timelineEmpty">时间轴</div>
+        </div>
+        <div class="ruler" id="ruler"></div>
+        <div class="tl-hint" id="tlHint">
+          <span>拖动胶片条标出要剪掉的区间 · 拖边缘微调 · 拖中间平移 · 点标尺定位 · 选中后 Delete 删除</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右侧面板 -->
+    <aside class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="chat">对话</button>
+        <button class="tab" data-tab="fx">效果</button>
+        <button class="tab" data-tab="overview">概览</button>
+        <button class="tab" data-tab="suggest">剪辑建议<span id="sugCount" class="badge hidden">0</span></button>
+      </div>
+
+      <!-- 对话：说一句话，AI 按需求剪 -->
+      <div class="tab-body chat-body" id="tab-chat">
+        <div class="chat-scroll" id="chatLog">
+          <div class="chat-hello" id="chatHello">
+            <div class="hello-mark">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 5.4L20 10.6l-5.8 2.2L12 18l-2.2-5.2L4 10.6l5.8-2.2z" fill="currentColor"/></svg>
+            </div>
+            <div class="hello-text">
+              <b>说说你想怎么剪</b>
+              <p>一句话就行：「剪掉停顿和空镜，控制在 60 秒」「卡点混剪 45 秒」「开头 3 秒不要」「别剪静音」。</p>
+              <p class="hello-dim">我会先告诉你我听懂了什么，再动手剪。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-quick" id="chatQuick">
+          <button data-text="剪掉停顿和空镜，紧凑一点">剪掉停顿和空镜</button>
+          <button data-text="控制在60秒">控制在 60 秒</button>
+          <button data-text="卡点混剪，45秒">卡点混剪 45 秒</button>
+          <button data-text="开头3秒不要">开头 3 秒不要</button>
+          <button data-text="别剪静音，其余都剪">别剪静音</button>
+        </div>
+
+        <div class="chat-input-wrap">
+          <textarea id="chatText" rows="2" placeholder="例如：剪成 60 秒的卡点混剪，开头 3 秒不要"></textarea>
+          <div class="chat-actions">
+            <label class="chat-opt" title="关掉就只出方案，你确认后再出片">
+              <input type="checkbox" id="optRenderNow" checked />
+              <span>直接出片</span>
+            </label>
+            <button class="chat-gear" id="btnLlmCfg" title="大模型设置（可选）">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 010-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 014 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 010 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg>
+            </button>
+            <button class="btn btn-primary btn-sm chat-send" id="btnChatSend" disabled>按需求剪</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 效果：字幕 / BGM / 变速 / 转场 -->
+      <div class="tab-body hidden" id="tab-fx">
+        <div class="fx-wrap">
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4M13 15h4"/></svg>
+                字幕
+              </span>
+              <label class="fx-switch"><input type="checkbox" id="fxSubOn" /><i></i></label>
+            </div>
+            <div class="fx-body" id="fxSubBody">
+              <div class="fx-btns">
+                <button class="btn btn-soft btn-sm" id="btnSubTranscribe">自动转写</button>
+                <button class="btn btn-ghost btn-sm" id="btnSubImport">导入 SRT</button>
+              </div>
+              <p class="fx-note" id="subStatus">还没转写。点「自动转写」让工具听一遍音频。</p>
+              <div class="fx-row">
+                <span class="fx-label">字号</span>
+                <div class="seg sm" id="fxSubSize">
+                  <button data-val="small">小</button>
+                  <button data-val="normal" class="active">中</button>
+                  <button data-val="large">大</button>
+                </div>
+              </div>
+              <div class="fx-row">
+                <span class="fx-label">位置</span>
+                <div class="seg sm" id="fxSubPos">
+                  <button data-val="top">上</button>
+                  <button data-val="center">中</button>
+                  <button data-val="bottom" class="active">下</button>
+                </div>
+              </div>
+              <div class="fx-row">
+                <span class="fx-label">描边</span>
+                <input type="color" id="fxSubOutline" class="fx-color" value="#000000" title="描边颜色" />
+                <label class="fx-check">
+                  <input type="checkbox" id="fxSubBox" />
+                  <span>半透明底框</span>
+                </label>
+              </div>
+              <div class="fx-row" id="fxSubBoxAlphaRow">
+                <span class="fx-label">底框</span>
+                <input type="range" id="fxSubBoxAlpha" min="0" max="100" value="62" />
+                <span class="fx-val" id="fxSubBoxAlphaVal">62%</span>
+              </div>
+              <p class="fx-note" id="fxSubBoxAlphaNote">底框透明度取决于播放器/压制端：本机预览可能看不出差别（预览引擎会把它画成实心），要精确控制请导出 SRT 或到剪映里调。</p>
+              <div class="fx-row">
+                <span class="fx-label">点亮</span>
+                <label class="fx-check">
+                  <input type="checkbox" id="fxSubHighlight" />
+                  <span>逐字点亮</span>
+                </label>
+                <input type="color" id="fxSubHlColor" class="fx-color" value="#FFD54A" title="已读部分的颜色" />
+              </div>
+              <p class="fx-note" id="fxSubHlNote">逐字点亮要词级时间：自动转写的能亮，导入的 SRT 没有词时间，只能整句显示。</p>
+              <p class="fx-note" id="fxSubWrapNote">长句在成片里按画面宽度自动折行；导出的 SRT 不折行，剪映/PR 会按自己的宽度重排，断句位置可能和成片不一样。</p>
+            </div>
+          </section>
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10.5 18.5h3"/></svg>
+                画幅
+              </span>
+              <span class="fx-hint" id="fxFrameHint">原画幅</span>
+            </div>
+            <div class="fx-body">
+              <div class="seg sm fx-grid" id="fxFrame">
+                <button data-val="origin" class="active">原画幅</button>
+                <button data-val="blur">竖屏·模糊背景</button>
+                <button data-val="crop">竖屏·居中裁切</button>
+              </div>
+              <p class="fx-note" id="fxFrameNote">竖屏输出 1080×1920。模糊背景把原画面完整放进中间、四周补虚化背景，口播最稳；居中裁切只留中间一条，人不在正中间就别用。</p>
+            </div>
+          </section>
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+                背景音乐
+              </span>
+              <label class="fx-switch"><input type="checkbox" id="fxBgmOn" /><i></i></label>
+            </div>
+            <div class="fx-body" id="fxBgmBody">
+              <div class="fx-btns">
+                <select id="fxBgmSel" class="fx-select">
+                  <option value="">音乐库（空）</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btnBgmLib">音乐库</button>
+              </div>
+              <p class="fx-note" id="bgmStatus">点「音乐库」导入音乐，导入一次以后都在。</p>
+              <div class="fx-row">
+                <span class="fx-label">音量</span>
+                <input type="range" id="fxBgmVol" min="0" max="60" value="24" />
+                <span class="fx-val" id="fxBgmVolVal">24%</span>
+              </div>
+              <label class="fx-check">
+                <input type="checkbox" id="fxBgmKeep" checked />
+                <span>保留原声（关掉就只剩 BGM）</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+                变速
+              </span>
+              <span class="fx-hint" id="fxSpeedHint">1×（原速）</span>
+            </div>
+            <div class="fx-body">
+              <div class="seg fx-grid" id="fxSpeed">
+                <button data-val="0.5">0.5×</button>
+                <button data-val="0.8">0.8×</button>
+                <button data-val="1" class="active">1×</button>
+                <button data-val="1.2">1.2×</button>
+                <button data-val="1.5">1.5×</button>
+                <button data-val="2">2×</button>
+              </div>
+              <p class="fx-note">声音跟着变快变慢，音调不变。想只变速某一段，在对话里说「10 到 20 秒放慢到 0.5 倍」。</p>
+            </div>
+          </section>
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg>
+                音量
+              </span>
+              <label class="fx-switch"><input type="checkbox" id="fxNormOn" /><i></i></label>
+            </div>
+            <div class="fx-body">
+              <p class="fx-note">统一到 -16 LUFS：手机外放、平台播放不会再忽大忽小。会多花一遍处理时间（只重编音频）。</p>
+              <label class="fx-check">
+                <input type="checkbox" id="fxDenoiseOn" />
+                <span>口腔杂音抑制（轻度降噪）</span>
+              </label>
+              <p class="fx-note">压掉呼吸声、咂嘴、口水音这类小声响，人声不动、BGM 不动。它属于音频缺陷，靠后期压，不靠剪点躲——剪点一缩小人声就碎了。</p>
+            </div>
+          </section>
+
+          <section class="fx-sec">
+            <div class="fx-head">
+              <span class="fx-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="9" height="12" rx="1.5"/><rect x="13" y="6" width="9" height="12" rx="1.5" opacity=".45"/></svg>
+                转场
+              </span>
+              <label class="fx-switch"><input type="checkbox" id="fxTransOn" /><i></i></label>
+            </div>
+            <div class="fx-body" id="fxTransBody">
+              <select id="fxTransType" class="fx-select fx-select-full">
+                <option value="auto">自动判断（推荐）</option>
+                <option value="fade">全片叠化</option>
+                <option value="dissolve">全片溶解</option>
+                <option value="black">全片黑场过渡</option>
+                <option value="white">全片白场过渡</option>
+                <option value="wipe">全片擦除</option>
+                <option value="slide">全片滑动</option>
+                <option value="circle">全片圆形展开</option>
+                <option value="pixel">全片像素化</option>
+              </select>
+              <p class="fx-note" id="fxTransNote">同一镜头里剪掉的停顿直接切，换了镜头才过渡，换得狠的地方用黑场或溶解。</p>
+              <div class="fx-row" id="fxTransDurRow">
+                <span class="fx-label">时长</span>
+                <input type="range" id="fxTransDur" min="1" max="15" value="5" />
+                <span class="fx-val" id="fxTransDurVal">0.5s</span>
+              </div>
+            </div>
+            <div class="fx-fades">
+              <div class="fx-row" id="fxFadeInRow">
+                <span class="fx-label">片头淡入</span>
+                <input type="range" id="fxFadeIn" min="0" max="20" value="4" />
+                <span class="fx-val" id="fxFadeInVal">0.4s</span>
+              </div>
+              <div class="fx-row" id="fxFadeOutRow">
+                <span class="fx-label">片尾淡出</span>
+                <input type="range" id="fxFadeOut" min="0" max="20" value="5" />
+                <span class="fx-val" id="fxFadeOutVal">0.5s</span>
+              </div>
+              <p class="fx-note" id="fxFadeNote">转场开着时按这里的值淡入淡出；转场关着时拖一下滑块也能单独用，拖回 0 就是不淡。</p>
+            </div>
+          </section>
+
+          <div class="fx-tip">
+            这些设置会叠加在「按需求剪」和「按时间轴出片」上；对话里说「加字幕」「换个背景音乐」也能触发，两边状态是同步的。
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-body hidden" id="tab-overview">
+        <div class="stat-grid">
+          <div class="stat"><label>时长</label><b id="sDuration">--</b></div>
+          <div class="stat"><label>分辨率</label><b id="sRes">--</b></div>
+          <div class="stat"><label>帧率</label><b id="sFps">--</b></div>
+          <div class="stat"><label>大小</label><b id="sSize">--</b></div>
+        </div>
+
+        <div class="section-title">检出结果</div>
+        <div class="result-cards">
+          <div class="rcard">
+            <div class="rcard-top"><span class="tag tag-scene">场景</span><b id="cScene">0</b></div>
+            <p>镜头切换点</p>
+          </div>
+          <div class="rcard">
+            <div class="rcard-top"><span class="tag tag-silent">静音</span><b id="cSilent">0</b></div>
+            <p>可压缩空白段</p>
+          </div>
+          <div class="rcard">
+            <div class="rcard-top"><span class="tag tag-dup">重复</span><b id="cDup">0</b></div>
+            <p>内容重复片段</p>
+          </div>
+          <div class="rcard">
+            <div class="rcard-top"><span class="tag tag-static">静止</span><b id="cStatic">0</b></div>
+            <p>画面不动的死时间</p>
+          </div>
+          <div class="rcard">
+            <div class="rcard-top"><span class="tag tag-blank">黑场</span><b id="cBlank">0</b></div>
+            <p>无信息量画面</p>
+          </div>
+        </div>
+
+        <div id="decideBlock" class="hidden">
+          <button class="decide-head" id="decideToggle">
+            <span>AI 怎么剪的</span>
+            <span id="decideSum" class="decide-sum"></span>
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="decideList" class="decide-list"></div>
+        </div>
+
+        <div id="estBox" class="estimate hidden">
+          <div class="est-line"><span>预计剪后时长</span><b id="estAfter">--</b></div>
+          <div class="est-bar"><i id="estFill"></i></div>
+          <div class="est-line muted"><span>剪掉</span><span id="estCut">--</span></div>
+        </div>
+
+        <div id="outputBox" class="output-card hidden">
+          <div class="output-head"><span class="ok-dot"></span>成片已生成</div>
+          <div class="output-name" id="outName"></div>
+          <div class="output-meta" id="outMeta"></div>
+          <div class="output-actions">
+            <button class="btn btn-primary btn-sm" id="btnPlayOut">播放</button>
+            <button class="btn btn-ghost btn-sm" id="btnOpenFolder">打开文件夹</button>
+          </div>
+          <button class="btn btn-kit btn-sm" id="btnKit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h18M3 8v11a1 1 0 001 1h16a1 1 0 001-1V8M3 8l2-4h14l2 4"/><path d="M9 12h6"/></svg>
+            导出精调包
+          </button>
+          <p class="kit-tip">时间线 + 分段素材，拿到剪映 / PR 里精调</p>
+        </div>
+
+        <div id="emptyHint" class="empty-hint">
+          选好视频后点「AI 粗剪」，它会自己判断剪哪里、直接出片；
+          想自己动手就拖时间轴。
+        </div>
+      </div>
+
+      <div class="tab-body hidden" id="tab-suggest">
+        <div class="sug-toolbar">
+          <label class="switch-row">
+            <input type="checkbox" id="optSilent" checked />
+            <span>静音</span>
+          </label>
+          <label class="switch-row">
+            <input type="checkbox" id="optDup" checked />
+            <span>重复</span>
+          </label>
+          <label class="switch-row">
+            <input type="checkbox" id="optStatic" checked />
+            <span>死时间</span>
+          </label>
+          <label class="switch-row">
+            <input type="checkbox" id="optBlank" checked />
+            <span>黑场</span>
+          </label>
+          <label class="switch-row" title="要靠转写定位，第一次会慢一些">
+            <input type="checkbox" id="optFiller" />
+            <span>口头禅</span>
+          </label>
+          <label class="switch-row" title="要靠转写定位，第一次会慢一些">
+            <input type="checkbox" id="optRetake" />
+            <span>重说</span>
+          </label>
+        </div>
+        <div class="sug-list" id="sugList">
+          <div class="empty-hint">还没有建议，先跑一次分析。</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 底栏 -->
+  <footer class="actionbar">
+    <div class="status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">就绪</span>
+    </div>
+    <div class="actions">
+      <button id="btnProfile" class="btn-profile" title="一键到位：剪掉停顿与口头禅 + 上字幕 + 硬切 + 统一音量">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3z"/><path d="M6 11a6 6 0 0012 0"/><path d="M12 17v4M9 21h6"/></svg>
+        口播
+      </button>
+      <div class="strength" id="strength" title="剪得有多狠">
+        <button data-val="conservative">保守</button>
+        <button data-val="standard" class="active">标准</button>
+        <button data-val="tight">紧凑</button>
+      </div>
+      <button id="btnAnalyze" class="btn btn-ghost" disabled>仅分析</button>
+      <button id="btnRender" class="btn btn-ghost" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h9l5 5v11a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg>
+        按时间轴出片
+      </button>
+      <button id="btnAuto" class="btn btn-primary" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.2 5.4L20 10.6l-5.8 2.2L12 18l-2.2-5.2L4 10.6l5.8-2.2z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/></svg>
+        AI 粗剪
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- 大模型设置（可选，不填也能用本地规则） -->
+<div class="modal-mask hidden" id="llmModal">
+  <div class="modal">
+    <div class="modal-head">
+      <b>大模型设置</b>
+      <button class="modal-x" id="llmClose" title="关闭">×</button>
+    </div>
+    <p class="modal-tip">
+      不填也能用：内置的本地规则认得「紧凑一点」「控制在 60 秒」「卡点混剪」「开头 3 秒不要」这类说法。
+      填了之后，长句和复杂要求理解得更准。
+    </p>
+    <label class="field">
+      <span>接口地址</span>
+      <input id="llmBase" placeholder="https://api.deepseek.com/v1" spellcheck="false" />
+    </label>
+    <label class="field">
+      <span>模型</span>
+      <input id="llmModel" placeholder="deepseek-chat" spellcheck="false" />
+    </label>
+    <label class="field">
+      <span>API Key</span>
+      <input id="llmKey" type="password" placeholder="sk-…" spellcheck="false" />
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="btnLlmTest">测试连通</button>
+      <button class="btn btn-primary btn-sm" id="btnLlmSave">保存</button>
+    </div>
+    <p class="modal-status" id="llmStatus"></p>
+    <p class="modal-note">Key 只存在本机的 <code>config.json</code> 里，不会上传。</p>
+  </div>
+</div>
+
+<!-- 音乐库：导入 / 试听 / 选用 / 删除 -->
+<div class="modal-mask hidden" id="musicModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <b>音乐库</b>
+      <button class="modal-x" id="musicClose" title="关闭">×</button>
+    </div>
+    <p class="modal-tip">
+      导入的音乐会一直留在 <code>music</code> 文件夹里，下次剪别的片子直接挑。
+      点一首就换上，▶ 可以先听，× 只是移走（能找回）。
+    </p>
+
+    <div class="drop-zone" id="musicDrop">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+      <p class="drop-main">把音乐文件拖到这里</p>
+      <p class="drop-sub">mp3 / wav / m4a / flac / aac / ogg，可以一次拖好几首</p>
+      <button class="btn btn-soft btn-sm" id="btnMusicPick">从电脑选…</button>
+      <input type="file" id="musicFile" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.wma,.aiff" multiple hidden />
+    </div>
+
+    <div class="music-head">
+      <span id="musicCount">0 首</span>
+      <span class="music-hint">点一行就换上，不用点确定</span>
+    </div>
+    <div class="music-list" id="musicList"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="btnMusicFolder">打开文件夹</button>
+      <button class="btn btn-primary btn-sm" id="musicDone">完成</button>
+    </div>
+    <p class="modal-status" id="musicStatus"></p>
+  </div>
+</div>
+
+<script src="/web/app.js"></script>
+</body>
+</html>
