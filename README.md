@@ -78,7 +78,7 @@
 | --- | --- |
 | Python | 3.10 及以上，推荐 3.11（开发环境为 3.11） |
 | FFmpeg | 不强制手动安装，见下方说明 |
-| 磁盘 | 代码与依赖约 550 MB；语音模型首次下载约 464 MB；处理视频时另需原片 2–3 倍空间 |
+| 磁盘 | 代码与依赖约 540 MB；语音模型首次下载约 464 MB；处理视频时另需原片 2–3 倍空间 |
 | 内存 | 建议 8 GB 以上 |
 | 系统 | Windows、macOS、Linux |
 
@@ -95,10 +95,52 @@
 
 ## 安装
 
+仓库里只有源码。Python 虚拟环境和 FFmpeg 二进制不进版本库：不同系统要用不同构建，
+几百 MB 的二进制放进来既拖慢克隆，也无法跨平台通用。安装脚本会在本机现装一份。
+
+先把仓库下载到本地：
+
 ```bash
 git clone https://github.com/m-1229/ai-film-editing.git
-cd ai-film-editing
+```
 
+也可以直接在网页上点 `Code → Download ZIP` 解压使用。
+
+### 一键安装
+
+Windows 双击 `install.bat`，macOS / Linux 执行 `bash install.sh`。
+
+脚本会自动完成这几件事：
+
+1. 查找 Python 3.10 以上版本，没有则引导安装
+2. 在项目目录内创建 `.venv` 虚拟环境
+3. 安装全部依赖，默认源失败时自动改用国内镜像
+4. 校验 FFmpeg，并报告语音模型状态
+
+整套依赖约 540 MB，视网速需要几分钟。脚本可以重复执行，环境损坏时再跑一次即可修好。
+
+Windows 上若没有 Python，脚本会询问是否用 winget 自动安装 3.11，只装到当前用户，不需要管理员权限，也不改动已有的 Python。
+
+### 连语音模型一起装好
+
+字幕和口头禅功能依赖本地语音模型，约 464 MB。想一次装完、之后完全离线：
+
+```bash
+# Windows
+.venv\Scripts\python setup_env.py --download-model
+
+# macOS / Linux
+.venv/bin/python setup_env.py --download-model
+```
+
+不装也可以，首次用到字幕时程序会自己下载。
+
+### 手动安装
+
+想自己控制环境，等价的手动步骤是：
+
+```bash
+cd ai-film-editing
 python -m venv .venv
 
 # Windows
@@ -109,13 +151,16 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-依赖清单不含 `torch` 和 `transformers`，整套装完约 550 MB。
+依赖清单不含 `torch` 和 `transformers`，整套装完约 540 MB。
 
 ## 启动
 
-```bash
-python main.py
-```
+Windows 双击 `start.bat`，macOS / Linux 执行 `bash start.sh`。
+
+启动前会先自检一遍环境，缺依赖时直接提示，不会等到剪到一半才报错。
+
+Windows 上 `start.bat` 和中文名的 `启动程序.bat` 是同一个入口，都在后台启动、不弹控制台窗口。
+需要看完整报错时用 `调试启动.bat`，它会保留控制台并打印 traceback。
 
 服务默认监听 `127.0.0.1:8756`，并自动打开一个独立应用窗口。
 
@@ -133,6 +178,7 @@ python main.py
 第一次使用字幕或口头禅功能时，会下载语音模型：
 
 - 模型为 `faster-whisper` 的 small 档，下载后存放在 `models/whisper/`，约 464 MB
+- 可以在安装时用 `--download-model` 提前下好，也可以等首次使用时自动下载
 - 默认使用国内镜像 `hf-mirror.com`，海外网络可设置环境变量
   `HF_ENDPOINT=https://huggingface.co`
 - 下载期间进度只显示整体提示，没有细粒度百分比，属正常现象
@@ -146,6 +192,11 @@ python main.py
 
 ```text
 .
+├── install.bat          # Windows 一键安装
+├── install.sh           # macOS / Linux 一键安装
+├── start.bat            # Windows 一键启动
+├── start.sh             # macOS / Linux 一键启动
+├── setup_env.py         # 安装器：建 venv、装依赖、校验 FFmpeg、自检
 ├── main.py              # 入口：web（默认）/ analyze / gui
 ├── backend/
 │   ├── server.py        # HTTP 服务、任务队列、结果缓存
@@ -165,6 +216,13 @@ python main.py
 ```
 
 `models/`、`bin/`、`music/`、`projects/` 为运行时目录，不纳入版本库。
+
+## 卸载
+
+关掉程序，删除整个项目目录即可。
+
+虚拟环境、语音模型、转写缓存都放在项目目录里，不写注册表，也不往系统 Python 里装包。
+想保留素材，把 `projects/` 单独拷出来就行。
 
 ## 已知限制
 
